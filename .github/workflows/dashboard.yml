@@ -1,0 +1,70 @@
+# Cartouche profile dashboard for the Sandjab GitHub profile.
+# Renders cumulative stars, top-5 repos, 6-axis profile radar, and the
+# 53-week contribution heatmap. Commits the result to assets/.
+#
+# In README.md, embed the result with:
+#
+#     <picture>
+#       <source media="(prefers-color-scheme: dark)" srcset="assets/profile-dark.svg">
+#       <img src="assets/profile-light.svg" alt="Cartouche profile dashboard">
+#     </picture>
+
+name: Cartouche · profile dashboard
+
+on:
+  schedule:
+    # Twice a day — profile aggregates change slowly.
+    - cron: "0 6,18 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/dashboard.yml"
+
+permissions:
+  contents: write   # required to commit the regenerated SVG
+
+concurrency:
+  group: cartouche-profile
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Cartouche
+        # TODO: switch to `pip install cartouche-svg` once published on PyPI.
+        run: pip install git+https://github.com/Sandjab/cartouche.git@main
+
+      - name: Render light + dark variants
+        env:
+          # GITHUB_TOKEN is required for the GraphQL contribution calendar.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HANDLE: ${{ github.repository_owner }}
+        run: |
+          mkdir -p assets
+          cartouche profile "$HANDLE" \
+            --theme blueprint-light \
+            --out assets/profile-light.svg
+          cartouche profile "$HANDLE" \
+            --theme blueprint-dark \
+            --out assets/profile-dark.svg
+
+      - name: Commit if changed
+        run: |
+          if [[ -n $(git status --porcelain assets/) ]]; then
+            git config user.name "cartouche-bot"
+            git config user.email "cartouche-bot@users.noreply.github.com"
+            git add assets/
+            git commit -m "chore(cartouche): refresh profile dashboard"
+            git push
+          else
+            echo "No dashboard changes."
+          fi

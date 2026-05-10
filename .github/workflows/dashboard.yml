@@ -64,7 +64,13 @@ jobs:
             git config user.email "cartouche-bot@users.noreply.github.com"
             git add assets/
             git commit -m "chore(cartouche): refresh profile dashboard"
-            git push
+            for i in 1 2 3; do
+              git push && exit 0
+              echo "Push rejected, rebasing on origin/main (attempt $i/3)..."
+              git pull --rebase origin main
+            done
+            echo "Push failed after 3 retries" >&2
+            exit 1
           else
             echo "No dashboard changes."
           fi

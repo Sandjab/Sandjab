@@ -45,8 +45,15 @@ jobs:
 
       - name: Render light + dark variants
         env:
-          # GITHUB_TOKEN is required for the GraphQL contribution calendar.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A user PAT is required, NOT the default secrets.GITHUB_TOKEN.
+          # The profile dashboard aggregates stargazer *timelines* across all
+          # of the owner's repos, i.e. cross-repo reads. Since ~2026-07-03,
+          # GitHub returns 403 "Resource not accessible by integration" when an
+          # installation token (the default GITHUB_TOKEN) reads another repo's
+          # /stargazers, so the star history silently came back empty. A PAT is
+          # not an integration and can read them (it also covers the GraphQL
+          # contribution calendar). Store it as the CARTOUCHE_PAT secret.
+          GITHUB_TOKEN: ${{ secrets.CARTOUCHE_PAT }}
           HANDLE: ${{ github.repository_owner }}
         run: |
           mkdir -p assets

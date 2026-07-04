@@ -1,0 +1,28 @@
+# TEMPORARY diagnostic — remove after use.
+# Probes the /stargazers endpoint under the CI GITHUB_TOKEN to explain why
+# the profile dashboard's star history comes back empty. Mirrors the token
+# setup of dashboard.yml (same secret, same contents: write scope) so the
+# result faithfully reflects what the real workflow's token sees.
+name: DIAG · stargazers probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probe stargazers under the CI token
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 diag_stargazers.py
